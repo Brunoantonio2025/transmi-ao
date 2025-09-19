@@ -44,10 +44,23 @@ function enableKioskInteractions() {
             overlay.classList.remove('visible');
             try { localStorage.setItem('kioskActivated', '1'); } catch (e) {}
             requestWakeLock();
+            // Garantir que o áudio esteja habilitado após interação do usuário
+            enableAudio();
         });
     }
     overlay.addEventListener('click', activate);
     overlay.addEventListener('touchstart', activate, { passive: true });
+}
+
+// Habilitar áudio após interação do usuário
+function enableAudio() {
+    if (remoteVideo && remoteVideo.srcObject) {
+        remoteVideo.muted = false;
+        // Tentar tocar novamente para garantir que o áudio funcione
+        try {
+            remoteVideo.play();
+        } catch (e) {}
+    }
 }
 
 function showActivateOverlay() {
@@ -174,10 +187,21 @@ function setupPeerConnection() {
         } catch(e) {}
         
         try {
+            // Iniciar mutado para permitir autoplay, depois habilitar áudio
             remoteVideo.muted = true;
             const playPromise = remoteVideo.play();
             if (playPromise && typeof playPromise.then === 'function') {
-                playPromise.catch(() => {});
+                playPromise.then(() => {
+                    // Habilitar áudio após começar a tocar
+                    setTimeout(() => {
+                        remoteVideo.muted = false;
+                    }, 500);
+                }).catch(() => {});
+            } else {
+                // Fallback para navegadores que não retornam Promise
+                setTimeout(() => {
+                    remoteVideo.muted = false;
+                }, 1000);
             }
         } catch (e) {}
         
