@@ -610,7 +610,13 @@
                 addLog(`Enviando ${videoTracks.length} video tracks e ${audioTracks.length} audio tracks`, 'info');
                 
                 localStream.getTracks().forEach(track => {
-                    addLog(`Adicionando track: ${track.kind} - enabled: ${track.enabled}`, 'info');
+                    addLog(`Adicionando track: ${track.kind} - enabled: ${track.enabled} - muted: ${track.muted}`, 'info');
+                    
+                    // Se for audio track e estiver mutado, tentar desmutar
+                    if (track.kind === 'audio' && track.muted) {
+                        addLog('Audio track do transmissor está mutado! Verificando microfone...', 'warning');
+                    }
+                    
                     peerConnection.addTrack(track, localStream);
                 });
             }

@@ -75,10 +75,16 @@ function enableAudio() {
         console.log('Audio tracks no enableAudio:', audioTracks.length);
         
         if (audioTracks.length > 0) {
-            // Garantir que o track de áudio esteja habilitado
+            // Garantir que o track de áudio esteja habilitado e desmutado
             audioTracks.forEach(track => {
                 track.enabled = true;
+                // Tentar desmutar o track (se a propriedade existir)
+                if ('muted' in track && track.muted) {
+                    console.warn('Audio track estava mutado, tentando desmutar...');
+                    // Nota: MediaStreamTrack.muted é read-only, indica status do hardware
+                }
                 console.log('Audio track habilitado:', track.enabled);
+                console.log('Audio track muted (read-only):', track.muted);
             });
         }
         
@@ -102,6 +108,26 @@ function enableAudio() {
         try {
             remoteVideo.play().then(() => {
                 console.log('Vídeo tocando com áudio habilitado');
+                
+                // Verificar se há áudio sendo reproduzido
+                setTimeout(() => {
+                    if (remoteVideo.srcObject) {
+                        const audioTracks = remoteVideo.srcObject.getAudioTracks();
+                        if (audioTracks.length > 0) {
+                            console.log('Status final do audio track:', {
+                                enabled: audioTracks[0].enabled,
+                                muted: audioTracks[0].muted,
+                                readyState: audioTracks[0].readyState
+                            });
+                        }
+                        console.log('Status final do video element:', {
+                            muted: remoteVideo.muted,
+                            volume: remoteVideo.volume,
+                            paused: remoteVideo.paused
+                        });
+                    }
+                }, 1000);
+                
             }).catch(e => {
                 console.error('Erro ao tocar vídeo:', e);
             });
