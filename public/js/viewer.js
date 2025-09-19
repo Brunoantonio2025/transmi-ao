@@ -27,11 +27,16 @@ function addLog(message, type) { /* noop */ }
 
 // Utilitários kiosk
 function requestFullscreen(el) {
-    if (!document.fullscreenElement) {
+    // Só tentar fullscreen se for uma interação direta do usuário
+    if (!document.fullscreenElement && document.hasFocus()) {
         const elem = el || document.documentElement;
         const req = elem.requestFullscreen || elem.webkitRequestFullscreen || elem.msRequestFullscreen;
         if (req) {
-            try { return req.call(elem); } catch (_) { return Promise.resolve(); }
+            try { 
+                return req.call(elem).catch(() => Promise.resolve()); 
+            } catch (_) { 
+                return Promise.resolve(); 
+            }
         }
     }
     return Promise.resolve();
@@ -40,13 +45,16 @@ function requestFullscreen(el) {
 function enableKioskInteractions() {
     const overlay = document.getElementById('activateOverlay');
     function activate() {
-        requestFullscreen(document.documentElement).finally(() => {
-            overlay.classList.remove('visible');
-            try { localStorage.setItem('kioskActivated', '1'); } catch (e) {}
-            requestWakeLock();
-            // Garantir que o áudio esteja habilitado após interação do usuário
-            enableAudio();
-        });
+        // Só esconder overlay e habilitar áudio, sem forçar fullscreen
+        overlay.classList.remove('visible');
+        try { localStorage.setItem('kioskActivated', '1'); } catch (e) {}
+        requestWakeLock();
+        enableAudio();
+        
+        // Tentar fullscreen apenas se o usuário realmente clicou
+        if (event && (event.type === 'click' || event.type === 'touchstart')) {
+            requestFullscreen(document.documentElement);
+        }
     }
     overlay.addEventListener('click', activate);
     overlay.addEventListener('touchstart', activate, { passive: true });
