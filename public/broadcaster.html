@@ -115,6 +115,7 @@
         .btn-primary { background: linear-gradient(180deg, #ef4444, #dc2626); }
         .btn-secondary { background: linear-gradient(180deg, #34d399, #10b981); }
         .btn-danger { background: linear-gradient(180deg, #f97316, #ea580c); }
+        .btn-muted { background: linear-gradient(180deg, #64748b, #475569); }
         .btn-home { background: linear-gradient(180deg, #60a5fa, #2563eb); }
 
         .video-container {
@@ -283,6 +284,7 @@
         <!-- Controles -->
         <div class="controls">
             <button id="startBtn" class="btn btn-primary">Iniciar Câmera</button>
+            <button id="flipCameraBtn" class="btn btn-muted" disabled>🔄 Virar Câmera</button>
             <button id="broadcastBtn" class="btn btn-secondary" disabled>Começar Transmissão</button>
             <button id="stopBtn" class="btn btn-danger" disabled>Parar Transmissão</button>
             <a href="/" class="btn btn-home">← Voltar ao Início</a>
@@ -333,9 +335,12 @@
         let peerConnections = new Map(); // Múltiplas conexões para múltiplos espectadores
         let ws = null;
         let isTransmitting = false;
+        let currentFacingMode = 'user'; // 'user' = frontal, 'environment' = traseira
+        let availableCameras = [];
 
         // Elementos DOM
         const startBtn = document.getElementById('startBtn');
+        const flipCameraBtn = document.getElementById('flipCameraBtn');
         const broadcastBtn = document.getElementById('broadcastBtn');
         const stopBtn = document.getElementById('stopBtn');
         const localVideo = document.getElementById('localVideo');
@@ -461,18 +466,48 @@
             viewerCount.textContent = count;
         }
 
+        // Detectar câmeras disponíveis
+        async function detectAvailableCameras() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                availableCameras = devices.filter(device => device.kind === 'videoinput');
+                addLog(`Detectadas ${availableCameras.length} câmeras`, 'info');
+                
+                // Habilitar botão de alternar câmera se houver mais de uma
+                if (availableCameras.length > 1) {
+                    flipCameraBtn.disabled = false;
+                    addLog('Botão de alternar câmera habilitado', 'info');
+                }
+            } catch (error) {
+                addLog(`Erro ao detectar câmeras: ${error.message}`, 'warning');
+            }
+        }
+
         // Iniciar câmera e microfone
-        async function startCamera() {
+        async function startCamera(facingMode = currentFacingMode) {
             try {
                 addLog('Solicitando acesso à câmera e microfone...', 'info');
                 
+                // Parar stream anterior se existir
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                }
+                
+                // Configurações de vídeo com facingMode
+                const videoConstraints = {
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    frameRate: { ideal: 30 }
+                };
+
+                // Adicionar facingMode se suportado
+                if (facingMode) {
+                    videoConstraints.facingMode = facingMode;
+                }
+
                 // Solicitar permissões com configurações otimizadas para transmissão
                 localStream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        frameRate: { ideal: 30 }
-                    },
+                    video: videoConstraints,
                     audio: {
                         echoCancellation: true,
                         noiseSuppression: true,
@@ -483,21 +518,81 @@
                 // Mostrar vídeo local
                 localVideo.srcObject = localStream;
                 
-                addLog('Câmera e microfone iniciados com sucesso', 'success');
-                videoStatus.textContent = 'Câmera ligada - Pronto para transmitir';
+                addLog(`Câmera iniciada (${facingMode === 'user' ? 'frontal' : 'traseira'})`, 'success');
+                videoStatus.textContent = `Câmera ${facingMode === 'user' ? 'frontal' : 'traseira'} - Pronto para transmitir`;
                 
                 // Atualizar controles
                 startBtn.disabled = true;
                 broadcastBtn.disabled = false;
+                flipCameraBtn.disabled = false;
                 
                 // Mostrar qualidade do vídeo
                 const videoTrack = localStream.getVideoTracks()[0];
                 const settings = videoTrack.getSettings();
                 videoQuality.textContent = `${settings.width}x${settings.height} @ ${settings.frameRate}fps`;
 
+                // Detectar câmeras disponíveis
+                await detectAvailableCameras();
+
+                // Se estiver transmitindo, atualizar as conexões peer
+                if (isTransmitting) {
+                    await updatePeerConnectionsWithNewStream();
+                }
+
             } catch (error) {
                 addLog(`Erro ao acessar câmera: ${error.message}`, 'error');
                 alert('Erro ao acessar câmera e microfone. Verifique as permissões.');
+            }
+        }
+
+        // Alternar entre câmera frontal e traseira
+        async function flipCamera() {
+            try {
+                addLog('Alternando câmera...', 'info');
+                flipCameraBtn.disabled = true;
+                
+                // Alternar facingMode
+                currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+                
+                // Reiniciar câmera com novo facingMode
+                await startCamera(currentFacingMode);
+                
+                addLog(`Câmera alternada para ${currentFacingMode === 'user' ? 'frontal' : 'traseira'}`, 'success');
+                
+            } catch (error) {
+                addLog(`Erro ao alternar câmera: ${error.message}`, 'error');
+                // Reverter facingMode em caso de erro
+                currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            } finally {
+                flipCameraBtn.disabled = false;
+            }
+        }
+
+        // Atualizar conexões peer com novo stream
+        async function updatePeerConnectionsWithNewStream() {
+            if (!localStream) return;
+            
+            addLog('Atualizando stream para espectadores...', 'info');
+            
+            for (const [viewerId, peerConnection] of peerConnections) {
+                try {
+                    // Remover tracks antigos
+                    const senders = peerConnection.getSenders();
+                    for (const sender of senders) {
+                        if (sender.track) {
+                            peerConnection.removeTrack(sender);
+                        }
+                    }
+                    
+                    // Adicionar novos tracks
+                    localStream.getTracks().forEach(track => {
+                        peerConnection.addTrack(track, localStream);
+                    });
+                    
+                    addLog(`Stream atualizado para espectador ${viewerId}`, 'info');
+                } catch (error) {
+                    addLog(`Erro ao atualizar stream para espectador ${viewerId}: ${error.message}`, 'error');
+                }
             }
         }
 
@@ -693,6 +788,7 @@
 
         // Event listeners
         startBtn.addEventListener('click', startCamera);
+        flipCameraBtn.addEventListener('click', flipCamera);
         broadcastBtn.addEventListener('click', startBroadcast);
         stopBtn.addEventListener('click', stopBroadcast);
 
