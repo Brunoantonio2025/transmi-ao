@@ -605,7 +605,12 @@
 
             // Adicionar stream local à conexão
             if (localStream) {
+                const videoTracks = localStream.getVideoTracks();
+                const audioTracks = localStream.getAudioTracks();
+                addLog(`Enviando ${videoTracks.length} video tracks e ${audioTracks.length} audio tracks`, 'info');
+                
                 localStream.getTracks().forEach(track => {
+                    addLog(`Adicionando track: ${track.kind} - enabled: ${track.enabled}`, 'info');
                     peerConnection.addTrack(track, localStream);
                 });
             }

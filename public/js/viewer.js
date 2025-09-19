@@ -66,12 +66,42 @@ function enableKioskInteractions() {
 
 // Habilitar áudio após interação do usuário
 function enableAudio() {
+    console.log('Tentando habilitar áudio...');
     if (remoteVideo && remoteVideo.srcObject) {
+        console.log('Video element encontrado, srcObject:', remoteVideo.srcObject);
+        
+        const stream = remoteVideo.srcObject;
+        const audioTracks = stream.getAudioTracks();
+        console.log('Audio tracks no enableAudio:', audioTracks.length);
+        
+        if (audioTracks.length > 0) {
+            // Garantir que o track de áudio esteja habilitado
+            audioTracks.forEach(track => {
+                track.enabled = true;
+                console.log('Audio track habilitado:', track.enabled);
+            });
+        }
+        
+        // Desmutar o elemento de vídeo
         remoteVideo.muted = false;
-        // Tentar tocar novamente para garantir que o áudio funcione
+        console.log('Video element desmutado:', !remoteVideo.muted);
+        
+        // Definir volume máximo
+        remoteVideo.volume = 1.0;
+        console.log('Volume definido para:', remoteVideo.volume);
+        
+        // Tentar tocar novamente
         try {
-            remoteVideo.play();
-        } catch (e) {}
+            remoteVideo.play().then(() => {
+                console.log('Vídeo tocando com áudio habilitado');
+            }).catch(e => {
+                console.error('Erro ao tocar vídeo:', e);
+            });
+        } catch (e) {
+            console.error('Erro no play():', e);
+        }
+    } else {
+        console.warn('Video element ou srcObject não encontrado');
     }
 }
 
@@ -187,13 +217,27 @@ function setupPeerConnection() {
     peerConnection = new RTCPeerConnection(rtcConfiguration);
     
     peerConnection.ontrack = function(event) {
-        remoteVideo.srcObject = event.streams[0];
+        console.log('Stream recebido:', event.streams[0]);
+        const stream = event.streams[0];
+        
+        // Debug: verificar tracks de áudio e vídeo
+        const videoTracks = stream.getVideoTracks();
+        const audioTracks = stream.getAudioTracks();
+        console.log('Video tracks:', videoTracks.length);
+        console.log('Audio tracks:', audioTracks.length);
+        
+        if (audioTracks.length > 0) {
+            console.log('Audio track encontrado:', audioTracks[0]);
+            console.log('Audio track enabled:', audioTracks[0].enabled);
+            console.log('Audio track muted:', audioTracks[0].muted);
+        } else {
+            console.warn('Nenhum track de áudio encontrado no stream!');
+        }
+        
+        remoteVideo.srcObject = stream;
         remoteVideo.style.display = 'block';
         videoPlaceholder.style.display = 'none';
         liveIndicator.classList.add('active');
-        
-        // Não forçar fullscreen automaticamente quando o vídeo começar
-        // O usuário pode ativar manualmente se desejar
         
         try {
             // Iniciar mutado para permitir autoplay
