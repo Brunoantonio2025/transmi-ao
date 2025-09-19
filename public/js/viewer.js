@@ -44,16 +44,20 @@ function requestFullscreen(el) {
 
 function enableKioskInteractions() {
     const overlay = document.getElementById('activateOverlay');
-    function activate() {
-        // Só esconder overlay e habilitar áudio, sem forçar fullscreen
+    function activate(event) {
+        // Esconder overlay e habilitar áudio após interação do usuário
         overlay.classList.remove('visible');
         try { localStorage.setItem('kioskActivated', '1'); } catch (e) {}
         requestWakeLock();
+        
+        // Habilitar áudio apenas após interação real do usuário
         enableAudio();
         
-        // Tentar fullscreen apenas se o usuário realmente clicou
+        // Tentar fullscreen apenas se o usuário clicou
         if (event && (event.type === 'click' || event.type === 'touchstart')) {
-            requestFullscreen(document.documentElement);
+            setTimeout(() => {
+                requestFullscreen(document.documentElement);
+            }, 100);
         }
     }
     overlay.addEventListener('click', activate);
@@ -192,22 +196,13 @@ function setupPeerConnection() {
         // O usuário pode ativar manualmente se desejar
         
         try {
-            // Iniciar mutado para permitir autoplay, depois habilitar áudio
+            // Iniciar mutado para permitir autoplay
             remoteVideo.muted = true;
             const playPromise = remoteVideo.play();
             if (playPromise && typeof playPromise.then === 'function') {
-                playPromise.then(() => {
-                    // Habilitar áudio após começar a tocar
-                    setTimeout(() => {
-                        remoteVideo.muted = false;
-                    }, 500);
-                }).catch(() => {});
-            } else {
-                // Fallback para navegadores que não retornam Promise
-                setTimeout(() => {
-                    remoteVideo.muted = false;
-                }, 1000);
+                playPromise.catch(() => {});
             }
+            // Áudio será habilitado apenas após interação do usuário
         } catch (e) {}
         
         requestWakeLock();
