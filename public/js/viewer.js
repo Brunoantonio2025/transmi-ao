@@ -264,6 +264,19 @@ function setupPeerConnection() {
             console.log('Audio track encontrado:', audioTracks[0]);
             console.log('Audio track enabled:', audioTracks[0].enabled);
             console.log('Audio track muted:', audioTracks[0].muted);
+            
+            // Verificar se o audio track está muted (problema no transmissor)
+            if (audioTracks[0].muted) {
+                console.warn('⚠️ ÁUDIO MUTADO: O microfone do transmissor está silenciado!');
+                // Mostrar aviso visual para o usuário
+                setTimeout(() => {
+                    const videoStatus = document.getElementById('videoStatus');
+                    if (videoStatus) {
+                        videoStatus.textContent = '🔇 Sem áudio - Microfone do transmissor silenciado';
+                        videoStatus.style.color = '#f59e0b';
+                    }
+                }, 1000);
+            }
         } else {
             console.warn('Nenhum track de áudio encontrado no stream!');
         }
