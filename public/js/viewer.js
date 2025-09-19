@@ -68,7 +68,7 @@ function showActivateOverlay() {
     let activated = false;
     try { activated = localStorage.getItem('kioskActivated') === '1'; } catch (e) {}
     if (activated) {
-        requestFullscreen(document.documentElement);
+        // Não forçar fullscreen automaticamente, apenas esconder overlay
         overlay.classList.remove('visible');
     } else {
         overlay.classList.add('visible');
@@ -180,11 +180,8 @@ function setupPeerConnection() {
         videoPlaceholder.style.display = 'none';
         liveIndicator.classList.add('active');
         
-        try {
-            if (localStorage.getItem('kioskActivated') === '1' && !document.fullscreenElement) {
-                requestFullscreen(document.documentElement);
-            }
-        } catch(e) {}
+        // Não forçar fullscreen automaticamente quando o vídeo começar
+        // O usuário pode ativar manualmente se desejar
         
         try {
             // Iniciar mutado para permitir autoplay, depois habilitar áudio
@@ -283,11 +280,7 @@ function releaseWakeLock() {
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
         requestWakeLock();
-        try { 
-            if (localStorage.getItem('kioskActivated') === '1' && !document.fullscreenElement) {
-                requestFullscreen(document.documentElement); 
-            }
-        } catch(_) {}
+        // Não forçar fullscreen automaticamente ao voltar para a página
     }
 });
 
