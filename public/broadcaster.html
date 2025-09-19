@@ -546,6 +546,39 @@
                             addLog(`Novo audio track: enabled=${newAudioTrack.enabled}, muted=${newAudioTrack.muted}`, 'info');
                         } catch (e) {
                             addLog(`Erro ao recriar audio stream: ${e.message}`, 'error');
+                            
+                            // Última tentativa: criar áudio sintético com Web Audio API
+                            try {
+                                addLog('Tentando criar áudio sintético com Web Audio API...', 'info');
+                                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                                const oscillator = audioContext.createOscillator();
+                                const gainNode = audioContext.createGain();
+                                
+                                // Configurar oscilador para frequência muito baixa (inaudível)
+                                oscillator.frequency.setValueAtTime(0.1, audioContext.currentTime);
+                                oscillator.type = 'sine';
+                                gainNode.gain.setValueAtTime(0.001, audioContext.currentTime); // Volume muito baixo
+                                
+                                // Conectar oscilador -> gain -> destination
+                                oscillator.connect(gainNode);
+                                gainNode.connect(audioContext.destination);
+                                
+                                // Criar MediaStreamDestination
+                                const mediaStreamDestination = audioContext.createMediaStreamDestination();
+                                gainNode.connect(mediaStreamDestination);
+                                
+                                // Iniciar oscilador
+                                oscillator.start();
+                                
+                                // Substituir audio track
+                                const syntheticAudioTrack = mediaStreamDestination.stream.getAudioTracks()[0];
+                                localStream.removeTrack(audioTrack);
+                                localStream.addTrack(syntheticAudioTrack);
+                                
+                                addLog(`Áudio sintético criado: enabled=${syntheticAudioTrack.enabled}, muted=${syntheticAudioTrack.muted}`, 'success');
+                            } catch (synthError) {
+                                addLog(`Erro ao criar áudio sintético: ${synthError.message}`, 'error');
+                            }
                         }
                     }
                 }
