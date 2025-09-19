@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Live Streaming - Página Inicial</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root{
+            --bg: linear-gradient(135deg, #5B86E5 0%, #36D1DC 100%);
+            --card-bg: rgba(255,255,255,0.1);
+            --card-border: rgba(255,255,255,0.25);
+            --text: #0f172a;
+            --text-inverse: #ffffff;
+            --shadow: 0 24px 48px rgba(0,0,0,0.2);
+            --radius-xl: 20px;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text);
+            padding: 1.5rem;
+        }
+
+        .container {
+            background: var(--card-bg);
+            backdrop-filter: saturate(180%) blur(12px);
+            -webkit-backdrop-filter: saturate(180%) blur(12px);
+            border: 1px solid var(--card-border);
+            padding: 2rem;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow);
+            text-align: center;
+            max-width: 820px;
+            width: 95%;
+            color: var(--text-inverse);
+        }
+
+        h1 {
+            color: #fff;
+            margin-bottom: .75rem;
+            font-size: 2.4rem;
+            font-weight: 800;
+            letter-spacing: .2px;
+        }
+
+        .subtitle {
+            color: #e2e8f0;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        .options { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin: 2rem 0; }
+
+        .option-card {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.25);
+            padding: 1.75rem;
+            border-radius: var(--radius-lg);
+            box-shadow: 0 16px 30px rgba(0,0,0,0.18);
+            transition: transform .2s ease, box-shadow .2s ease;
+            text-decoration: none;
+            color: var(--text-inverse);
+        }
+
+        .option-card:hover { transform: translateY(-6px); box-shadow: 0 24px 46px rgba(0,0,0,0.25); }
+
+        .option-icon { font-size: 3rem; margin-bottom: 1rem; }
+
+        .broadcaster-card { border-left: 4px solid #ef4444; }
+        .broadcaster-card .option-icon { color: #ef4444; }
+
+        .viewer-card { border-left: 4px solid #10b981; }
+        .viewer-card .option-icon { color: #10b981; }
+
+        .option-title { font-size: 1.45rem; font-weight: 700; margin-bottom: .35rem; }
+
+        .option-description { color: #e5e7eb; font-size: .98rem; line-height: 1.5; }
+
+        .info {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.25);
+            padding: 1.25rem 1.5rem;
+            margin-top: 1.5rem;
+            border-radius: var(--radius-lg);
+            text-align: left;
+            color: var(--text-inverse);
+        }
+
+        .info h3 { color: #fff; margin-bottom: .75rem; font-size: 1.15rem; }
+
+        .info ul { color: #e2e8f0; line-height: 1.8; }
+
+        .info li {
+            margin-bottom: 0.5rem;
+        }
+
+        .status { margin-top: 1.5rem; padding: .9rem 1rem; border-radius: 999px; font-weight: 700; display: inline-block; }
+
+        .status.connected { background: linear-gradient(180deg, #34d39955, #10b98155); color: #ecfdf5; border: 1px solid rgba(16,185,129,.4); }
+        .status.disconnected { background: linear-gradient(180deg, #fca5a555, #ef444455); color: #fee2e2; border: 1px solid rgba(239,68,68,.35); }
+
+        @media (max-width: 768px) {
+            .options {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .container {
+                padding: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 WebRTC Live Streaming</h1>
+        <p class="subtitle">Sistema de transmissão de vídeo ao vivo usando WebRTC<br>Escolha sua função para começar</p>
+
+        <div class="options">
+            <a href="broadcaster.html" class="option-card broadcaster-card">
+                <div class="option-icon">📹</div>
+                <div class="option-title">Transmissor</div>
+                <div class="option-description">
+                    Inicie uma transmissão ao vivo usando sua câmera e microfone
+                </div>
+            </a>
+
+            <a href="viewer.html" class="option-card viewer-card">
+                <div class="option-icon">👀</div>
+                <div class="option-title">Espectador</div>
+                <div class="option-description">
+                    Assista transmissões ao vivo de outros usuários
+                </div>
+            </a>
+        </div>
+
+        <div class="info">
+            <h3>ℹ️ Como funciona:</h3>
+            <ul>
+                <li><strong>Transmissor:</strong> Acessa sua câmera e microfone para transmitir ao vivo</li>
+                <li><strong>Espectador:</strong> Recebe e assiste o vídeo transmitido em tempo real</li>
+                <li><strong>WebRTC:</strong> Conexões diretas peer-to-peer para baixa latência</li>
+                <li><strong>Múltiplos espectadores:</strong> Vários usuários podem assistir simultaneamente</li>
+            </ul>
+        </div>
+
+        <div id="serverStatus" class="status disconnected">
+            🔄 Conectando ao servidor...
+        </div>
+    </div>
+
+    <script>
+        // Verificar status do servidor WebSocket
+        function checkServerStatus() {
+            try {
+                const ws = new WebSocket(`ws://${window.location.host}`);
+                
+                ws.onopen = function() {
+                    const statusEl = document.getElementById('serverStatus');
+                    statusEl.className = 'status connected';
+                    statusEl.innerHTML = '✅ Servidor conectado e funcionando';
+                    ws.close();
+                };
+
+                ws.onerror = function() {
+                    const statusEl = document.getElementById('serverStatus');
+                    statusEl.className = 'status disconnected';
+                    statusEl.innerHTML = '❌ Erro na conexão com o servidor';
+                };
+
+                // Timeout para conexão
+                setTimeout(() => {
+                    if (ws.readyState === WebSocket.CONNECTING) {
+                        ws.close();
+                        const statusEl = document.getElementById('serverStatus');
+                        statusEl.className = 'status disconnected';
+                        statusEl.innerHTML = '⏰ Timeout na conexão com o servidor';
+                    }
+                }, 5000);
+            } catch (error) {
+                console.error('Erro ao verificar status do servidor:', error);
+            }
+        }
+
+        // Verificar status quando a página carregar
+        document.addEventListener('DOMContentLoaded', checkServerStatus);
+    </script>
+</body>
+</html>

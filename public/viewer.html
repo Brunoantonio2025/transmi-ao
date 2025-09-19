@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+    <title>Espectador - WebRTC Live Streaming</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root{
+            --bg: linear-gradient(135deg, #5B86E5 0%, #36D1DC 100%);
+            --card-bg: rgba(255,255,255,0.1);
+            --card-border: rgba(255,255,255,0.25);
+            --text: #0f172a;
+            --text-inverse: #ffffff;
+            --shadow: 0 20px 40px rgba(0,0,0,0.15);
+            --radius-xl: 18px;
+            --radius-lg: 14px;
+            --radius-md: 12px;
+            --primary: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+            --glass: saturate(180%) blur(12px);
+        }
+
+        html, body { height: 100%; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: --bg;
+            background: var(--bg);
+            min-height: 100vh;
+            height: 100dvh; /* usar viewport dinamico em mobile */
+            padding: 0;
+            color: var(--text);
+            overflow: hidden; /* Sem scroll no modo kiosk */
+            -webkit-text-size-adjust: 100%;
+            overscroll-behavior: none;
+            touch-action: manipulation;
+        }
+
+        .container { width: 100vw; height: 100dvh; margin: 0; }
+
+        .header {
+            background: var(--card-bg);
+            backdrop-filter: var(--glass);
+            -webkit-backdrop-filter: var(--glass);
+            border: 1px solid var(--card-border);
+            padding: 1.5rem;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow);
+            margin-bottom: 1rem;
+            text-align: center;
+            color: var(--text-inverse);
+        }
+
+        h1 {
+            color: #4a5568;
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+        }
+
+        .controls {
+            position: sticky;
+            top: 0.5rem;
+            z-index: 20;
+            background: var(--card-bg);
+            backdrop-filter: var(--glass);
+            -webkit-backdrop-filter: var(--glass);
+            border: 1px solid var(--card-border);
+            padding: 1rem 1.25rem;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow);
+            margin-bottom: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 0.8rem 1.4rem;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: var(--radius-md);
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: .3px;
+            cursor: pointer;
+            transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease;
+            text-decoration: none;
+            display: inline-block;
+            min-width: 160px;
+            color: var(--text-inverse);
+            box-shadow: 0 10px 20px rgba(0,0,0,.15);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 26px rgba(0, 0, 0, 0.25), 0 0 0 2px rgba(255,255,255,0.15) inset;
+            filter: drop-shadow(0 6px 14px rgba(0,0,0,.25));
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary { background: linear-gradient(180deg, #34d399, #10b981); }
+        .btn-danger { background: linear-gradient(180deg, #ef4444, #dc2626); }
+        .btn-home { background: linear-gradient(180deg, #60a5fa, #2563eb); }
+
+        .video-container {
+            background: var(--card-bg);
+            backdrop-filter: var(--glass);
+            -webkit-backdrop-filter: var(--glass);
+            border: 1px solid var(--card-border);
+            padding: 0;
+            border-radius: 0;
+            box-shadow: none;
+            margin: 0;
+            width: 100vw;
+            height: 100dvh;
+        }
+
+        .video-wrapper {
+            position: relative;
+            background: #0b0f19;
+            border-radius: 0;
+            overflow: hidden;
+            width: 100vw;
+            height: 100dvh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: none;
+            padding-top: calc(env(safe-area-inset-top, 0px));
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px));
+            padding-left: calc(env(safe-area-inset-left, 0px));
+            padding-right: calc(env(safe-area-inset-right, 0px));
+        }
+
+        #remoteVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* preencher tela */
+            display: none;
+        }
+
+        .video-placeholder {
+            color: #cbd5e1;
+            text-align: center;
+            font-size: 1.1rem;
+            padding: 0 2rem;
+        }
+
+        .video-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            color: #e5e7eb;
+            padding: 1rem;
+            font-size: 0.92rem;
+        }
+
+        /* Overlay para toque/click inicial */
+        .activate-overlay {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.35);
+            color: #fff;
+            font-weight: 700;
+            letter-spacing: .3px;
+            font-size: 1rem;
+            z-index: 30;
+            padding: 0 18px;
+            text-align: center;
+        }
+        .activate-overlay.visible { display: flex; }
+
+        /* Esconder cursor após inatividade */
+        body.no-cursor { cursor: none; }
+
+        /* Ajustes específicos para telas pequenas */
+        @media (max-width: 600px) {
+            .video-overlay { font-size: 0.85rem; padding: 0.75rem; }
+            .video-placeholder { font-size: 1rem; }
+        }
+
+        .live-indicator {
+            position: absolute;
+            top: calc(env(safe-area-inset-top, 0px) + 12px);
+            left: calc(env(safe-area-inset-left, 0px) + 12px);
+            background: linear-gradient(180deg, #ef4444, #dc2626);
+            color: white;
+            padding: 0.45rem 0.85rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.2);
+            font-weight: 700;
+            font-size: 0.85rem;
+            display: none;
+            box-shadow: 0 8px 20px rgba(220,38,38,.45);
+        }
+
+        .live-indicator.active {
+            display: block;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .status-panel {
+            background: var(--card-bg);
+            backdrop-filter: var(--glass);
+            -webkit-backdrop-filter: var(--glass);
+            border: 1px solid var(--card-border);
+            padding: 1.25rem;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow);
+            margin-bottom: 1rem;
+            color: var(--text-inverse);
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .status-item {
+            padding: 1rem;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: var(--radius-lg);
+            text-align: center;
+            color: var(--text-inverse);
+        }
+
+        .status-label {
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            margin-bottom: 0.5rem;
+            letter-spacing: .3px;
+        }
+
+        .status-value {
+            display: inline-block;
+            font-size: 0.95rem;
+            font-weight: 700;
+            padding: .35rem .7rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.12);
+            color: #e5e7eb;
+        }
+
+        .status-connected { background: linear-gradient(180deg, #34d39955, #10b98155); color: #ecfdf5; }
+        .status-disconnected { background: linear-gradient(180deg, #fca5a555, #ef444455); color: #fee2e2; }
+        .status-receiving { background: linear-gradient(180deg, #93c5fd55, #3b82f655); color: #dbeafe; }
+
+        .logs {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: var(--glass);
+            -webkit-backdrop-filter: var(--glass);
+            padding: 1.25rem;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow);
+            color: var(--text-inverse);
+        }
+
+        .logs h3 {
+            margin-bottom: 1rem;
+            color: #ffffff;
+            letter-spacing: .3px;
+        }
+
+        #logContainer {
+            background: rgba(2, 6, 23, 0.85);
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            height: 220px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+        }
+
+        .log-entry {
+            margin-bottom: 0.25rem;
+        }
+
+        .log-info {
+            color: #63b3ed;
+        }
+
+        .log-success {
+            color: #68d391;
+        }
+
+        .log-warning {
+            color: #f6ad55;
+        }
+
+        .log-error {
+            color: #fc8181;
+        }
+
+        .waiting-message {
+            background: #ebf8ff;
+            border: 1px solid #90cdf4;
+            color: #2c5282;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Container do Vídeo (modo cliente: tela limpa) -->
+        <div class="video-container">
+            <div class="video-wrapper">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <div class="video-placeholder" id="videoPlaceholder">
+                    🎥 Aguardando transmissão ao vivo...
+                </div>
+                <div class="live-indicator" id="liveIndicator">
+                    🔴 AO VIVO
+                </div>
+                <div class="video-overlay"><div id="videoStatus">Aguardando transmissão</div></div>
+                <div id="activateOverlay" class="activate-overlay">Toque ou clique para ativar e entrar em tela cheia</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variáveis globais
+        let peerConnection = null;
+        let ws = null;
+        let isConnected = false;
+        let viewerId = null; // ID será atribuído pelo servidor
+
+        // Elementos DOM (modo cliente)
+        const remoteVideo = document.getElementById('remoteVideo');
+        const videoPlaceholder = document.getElementById('videoPlaceholder');
+        const liveIndicator = document.getElementById('liveIndicator');
+        const videoStatus = document.getElementById('videoStatus');
+        // elementos removidos no modo cliente: status/logs/controles
+
+        // Configuração WebRTC
+        const rtcConfiguration = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+
+        // Função para adicionar logs
+        function addLog(message, type = 'info') { /* logs desativados no modo cliente */ }
+
+        // Utilitários kiosk
+        function requestFullscreen(el) {
+            if (!document.fullscreenElement) {
+                const elem = el || document.documentElement;
+                const req = elem.requestFullscreen || elem.webkitRequestFullscreen || elem.msRequestFullscreen;
+                if (req) {
+                    return req.call(elem).catch(() => {});
+                }
+            }
+            return Promise.resolve();
+        }
+
+        function exitFullscreen() {
+            const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+            if (document.fullscreenElement && exit) exit.call(document);
+        }
+
+        function enableKioskInteractions() {
+            const overlay = document.getElementById('activateOverlay');
+            function activate() {
+                requestFullscreen(document.documentElement).finally(() => {
+                    overlay.classList.remove('visible');
+                    try { localStorage.setItem('kioskActivated', '1'); } catch (e) {}
+                    requestWakeLock();
+                });
+            }
+            overlay.addEventListener('click', activate);
+            overlay.addEventListener('touchstart', activate, { passive: true });
+        }
+
+        function showActivateOverlay() {
+            const overlay = document.getElementById('activateOverlay');
+            let activated = false;
+            try { activated = localStorage.getItem('kioskActivated') === '1'; } catch (e) {}
+            if (activated) {
+                // Tentar entrar em fullscreen sem mostrar overlay
+                requestFullscreen(document.documentElement);
+                overlay.classList.remove('visible');
+            } else {
+                overlay.classList.add('visible');
+            }
+        }
+
+        function setupInactivityCursorHide() {
+            let timer = null;
+            const delay = 3000;
+            function resetTimer() {
+                document.body.classList.remove('no-cursor');
+                if (timer) clearTimeout(timer);
+                timer = setTimeout(() => document.body.classList.add('no-cursor'), delay);
+            }
+            window.addEventListener('mousemove', resetTimer);
+            window.addEventListener('touchstart', resetTimer, { passive: true });
+            window.addEventListener('keydown', resetTimer);
+            resetTimer();
+        }
+
+        // Prevenir distrações
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key.toLowerCase() === 'r')) {
+                e.preventDefault();
+            }
+            if (e.key === 'F5') e.preventDefault();
+        });
+        document.addEventListener('gesturestart', (e) => e.preventDefault());
+
+        // Inicializar conexão WebSocket
+        function initializeWebSocket() {
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
+
+            ws.onopen = function() {
+                addLog('Conexão WebSocket estabelecida', 'success');
+                
+                // Registrar como espectador
+                ws.send(JSON.stringify({
+                    type: 'register-viewer'
+                }));
+            };
+
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+
+            ws.onclose = function() {
+                addLog('Conexão WebSocket perdida', 'warning');
+                
+                // Resetar status
+                resetVideoState();
+                
+                // Tentar reconectar após 3 segundos
+                setTimeout(initializeWebSocket, 3000);
+                // tentar reativar wake lock quando reconectar
+                releaseWakeLock();
+            };
+
+            ws.onerror = function(error) {
+                addLog('Erro WebSocket: ' + error.message, 'error');
+            };
+        }
+
+        // Processar mensagens WebSocket
+        function handleWebSocketMessage(data) {
+            switch (data.type) {
+                case 'registered':
+                    addLog(`Registrado como ${data.role}`, 'success');
+                    viewerId = data.viewerId; // Receber viewerId do servidor
+                    updateBroadcastStatus(data.broadcastActive || false);
+                    // Se já existe transmissão ativa, conectar automaticamente
+                    if (data.broadcastActive && !isConnected) {
+                        addLog('Transmissão já está ativa: conectando automaticamente...', 'info');
+                        connectToWatch();
+                    }
+                    break;
+
+                case 'broadcast-started':
+                    addLog('Transmissão iniciada pelo transmissor', 'success');
+                    updateBroadcastStatus(true);
+                    // Conectar automaticamente para assistir se ainda não conectado
+                    if (!isConnected) {
+                        addLog('Conectando automaticamente para assistir...', 'info');
+                        connectToWatch();
+                    }
+                    break;
+
+                case 'broadcast-stopped':
+                    addLog('Transmissão parada pelo transmissor', 'warning');
+                    updateBroadcastStatus(false);
+                    resetVideoState();
+                    waitingMessage.style.display = 'block';
+                    break;
+
+                case 'offer':
+                    // Receber oferta SDP do transmissor
+                    addLog('Oferta SDP recebida do transmissor', 'info');
+                    handleOffer(data.offer);
+                    break;
+
+                case 'ice-candidate':
+                    // Receber ICE candidate do transmissor
+                    addLog('ICE candidate recebido do transmissor', 'info');
+                    handleIceCandidate(data.candidate);
+                    break;
+
+                case 'broadcast-status':
+                    updateBroadcastStatus(data.isActive);
+                    if (data.isActive && !isConnected) {
+                        addLog('Status indica transmissão ativa: conectando automaticamente...', 'info');
+                        connectToWatch();
+                    }
+                    break;
+
+                case 'error':
+                    addLog(`Erro do servidor: ${data.message}`, 'error');
+                    break;
+
+                default:
+                    addLog(`Mensagem desconhecida: ${data.type}`, 'warning');
+            }
+        }
+
+        // Atualizar status da transmissão
+        function updateBroadcastStatus(isActive) { /* UI reduzida: apenas overlay atualiza */ }
+
+        // Atualizar contador de espectadores (modo cliente: não exibido)
+        function updateViewerCount(count) { /* noop */ }
+
+        // Resetar estado do vídeo
+        function resetVideoState() {
+            remoteVideo.style.display = 'none';
+            videoPlaceholder.style.display = 'block';
+            liveIndicator.classList.remove('active');
+            videoStatus.textContent = 'Aguardando transmissão';
+            
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+        }
+
+        // Conectar e começar a assistir
+        function connectToWatch() {
+            if (isConnected) return;
+            isConnected = true;
+            addLog('Iniciando conexão para assistir', 'info');
+            setupPeerConnection();
+        }
+
+        // Configurar conexão peer
+        function setupPeerConnection() {
+            peerConnection = new RTCPeerConnection(rtcConfiguration);
+            addLog('Conexão peer criada', 'info');
+
+            // Configurar eventos da conexão peer
+            peerConnection.ontrack = function(event) {
+                addLog('Stream remoto recebido', 'success');
+                remoteVideo.srcObject = event.streams[0];
+                remoteVideo.style.display = 'block';
+                videoPlaceholder.style.display = 'none';
+                liveIndicator.classList.add('active');
+                // Se já ativado antes, garantir fullscreen ao começar a tocar
+                try {
+                    if (localStorage.getItem('kioskActivated') === '1' && !document.fullscreenElement) {
+                        requestFullscreen(document.documentElement);
+                    }
+                } catch(e) {}
+                
+                // Garantir autoplay (alguns navegadores bloqueiam sem muted)
+                try {
+                    remoteVideo.muted = true;
+                    const playPromise = remoteVideo.play();
+                    if (playPromise && typeof playPromise.then === 'function') {
+                        playPromise.catch(() => {
+                            // console.log('Autoplay bloqueado. Interaja com a página para iniciar o vídeo.');
+                            addLog('Autoplay bloqueado. Interaja com a página para iniciar o vídeo.', 'warning');
+                        });
+                    }
+                } catch (e) {
+                    addLog('Falha ao iniciar reprodução automática: ' + e.message, 'warning');
+                }
+                // Manter a tela acordada durante a reprodução
+                requestWakeLock();
+            };
+
+            peerConnection.onicecandidate = function(event) {
+                if (event.candidate) {
+                    addLog('Enviando ICE candidate para transmissor', 'info');
+                    ws.send(JSON.stringify({
+                        type: 'ice-candidate',
+                        candidate: event.candidate,
+                        target: 'broadcaster',
+                        viewerId: viewerId
+                    }));
+                }
+            };
+
+            peerConnection.onconnectionstatechange = function() {
+                addLog(`Estado da conexão: ${peerConnection.connectionState}`, 'info');
+                
+                if (peerConnection.connectionState === 'connected') {
+                    addLog('Conexão P2P estabelecida com sucesso', 'success');
+                } else if (peerConnection.connectionState === 'failed' || 
+                          peerConnection.connectionState === 'disconnected') {
+                    addLog('Conexão P2P perdida', 'warning');
+                    resetVideoState();
+                }
+            };
+
+            peerConnection.oniceconnectionstatechange = function() {
+                addLog(`Estado ICE: ${peerConnection.iceConnectionState}`, 'info');
+            };
+        }
+
+        // Processar oferta SDP do transmissor
+        async function handleOffer(offer) {
+            if (!peerConnection) {
+                setupPeerConnection();
+            }
+
+            try {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+                addLog('Oferta SDP configurada', 'success');
+                
+                // Criar resposta
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                
+                addLog('Resposta SDP criada', 'success');
+
+                // Processar quaisquer ICE candidates recebidos antes da descrição remota
+                if (peerConnection.pendingRemoteCandidates && peerConnection.pendingRemoteCandidates.length > 0) {
+                    addLog(`Processando ${peerConnection.pendingRemoteCandidates.length} ICE candidates remotos pendentes`, 'info');
+                    for (const c of peerConnection.pendingRemoteCandidates) {
+                        try {
+                            await peerConnection.addIceCandidate(new RTCIceCandidate(c));
+                        } catch (e) {
+                            addLog('Falha ao aplicar ICE remoto pendente: ' + e.message, 'warning');
+                        }
+                    }
+                    peerConnection.pendingRemoteCandidates = [];
+                }
+
+                // Enviar resposta via WebSocket
+                ws.send(JSON.stringify({
+                    type: 'answer',
+                    answer: answer,
+                    viewerId: viewerId
+                }));
+                
+                addLog('Resposta SDP enviada para transmissor', 'info');
+
+            } catch (error) {
+                addLog(`Erro ao processar oferta: ${error.message}`, 'error');
+            }
+        }
+
+        // Processar ICE candidate do transmissor
+        async function handleIceCandidate(candidate) {
+            if (peerConnection) {
+                try {
+                    if (peerConnection.remoteDescription) {
+                        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                        addLog('ICE candidate processado', 'info');
+                    } else {
+                        // Fila até a descrição remota ser aplicada
+                        if (!peerConnection.pendingRemoteCandidates) {
+                            peerConnection.pendingRemoteCandidates = [];
+                        }
+                        peerConnection.pendingRemoteCandidates.push(candidate);
+                        addLog('ICE candidate remoto enfileirado (aguardando descrição remota)', 'info');
+                    }
+                } catch (error) {
+                    addLog(`Erro ao processar ICE candidate: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Desconectar
+        function disconnect() {
+            isConnected = false;
+            addLog('Desconectando...', 'warning');
+            resetVideoState();
+        }
+
+        // Event listeners
+        // Inicializar quando a página carregar (modo cliente: auto)
+        document.addEventListener('DOMContentLoaded', function() {
+            // Preparar modo kiosk
+            showActivateOverlay();
+            enableKioskInteractions();
+            setupInactivityCursorHide();
+
+            initializeWebSocket();
+        });
+
+        // Wake Lock API
+        let wakeLock = null;
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    if (!wakeLock) {
+                        wakeLock = await navigator.wakeLock.request('screen');
+                        wakeLock.addEventListener('release', () => { wakeLock = null; });
+                    }
+                }
+            } catch (e) {
+                // silencioso
+            }
+        }
+        function releaseWakeLock() { try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {}
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                requestWakeLock();
+                try { if (localStorage.getItem('kioskActivated') === '1' && !document.fullscreenElement) requestFullscreen(document.documentElement); } catch(e) {}
+            }
+        });
+
+        // Limpar recursos quando a página for fechada
+        window.addEventListener('beforeunload', function() {
+            if (peerConnection) {
+                peerConnection.close();
+            }
+        });
+    </script>
+</body>
+</html>
