@@ -1,3 +1,7 @@
+// Viewer script wrapped to avoid global scope issues
+(function(){
+'use strict';
+
 // Variáveis globais
 let peerConnection = null;
 let ws = null;
@@ -321,3 +325,5 @@ window.addEventListener('beforeunload', function() {
         peerConnection.close();
     }
 });
+
+})();
