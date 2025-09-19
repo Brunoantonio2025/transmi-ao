@@ -82,9 +82,17 @@ function enableAudio() {
             });
         }
         
-        // Desmutar o elemento de vídeo
+        // Forçar desmute do elemento de vídeo
         remoteVideo.muted = false;
-        console.log('Video element desmutado:', !remoteVideo.muted);
+        
+        // Verificar se realmente desmutou
+        setTimeout(() => {
+            console.log('Video element muted após timeout:', remoteVideo.muted);
+            if (remoteVideo.muted) {
+                console.warn('Forçando desmute novamente...');
+                remoteVideo.muted = false;
+            }
+        }, 100);
         
         // Definir volume máximo
         remoteVideo.volume = 1.0;
@@ -238,6 +246,19 @@ function setupPeerConnection() {
         remoteVideo.style.display = 'block';
         videoPlaceholder.style.display = 'none';
         liveIndicator.classList.add('active');
+        
+        // Adicionar event listener para forçar desmute ao clicar no vídeo
+        remoteVideo.addEventListener('click', function() {
+            console.log('Clique no vídeo - forçando desmute');
+            remoteVideo.muted = false;
+            remoteVideo.volume = 1.0;
+        });
+        
+        remoteVideo.addEventListener('touchstart', function() {
+            console.log('Toque no vídeo - forçando desmute');
+            remoteVideo.muted = false;
+            remoteVideo.volume = 1.0;
+        });
         
         try {
             // Iniciar mutado para permitir autoplay
