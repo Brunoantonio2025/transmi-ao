@@ -511,9 +511,44 @@
                     audio: {
                         echoCancellation: true,
                         noiseSuppression: true,
-                        autoGainControl: true
+                        autoGainControl: true,
+                        sampleRate: 48000,
+                        channelCount: 2,
+                        volume: 1.0
                     }
                 });
+
+                // Verificar se o áudio está funcionando
+                const audioTracks = localStream.getAudioTracks();
+                if (audioTracks.length > 0) {
+                    const audioTrack = audioTracks[0];
+                    addLog(`Audio track status: enabled=${audioTrack.enabled}, muted=${audioTrack.muted}`, 'info');
+                    
+                    if (audioTrack.muted) {
+                        addLog('⚠️ Audio track está muted - tentando recriar stream...', 'warning');
+                        
+                        // Tentar recriar apenas o áudio
+                        try {
+                            const audioOnlyStream = await navigator.mediaDevices.getUserMedia({
+                                audio: {
+                                    echoCancellation: false,
+                                    noiseSuppression: false,
+                                    autoGainControl: false,
+                                    sampleRate: 44100
+                                }
+                            });
+                            
+                            // Substituir o track de áudio
+                            const newAudioTrack = audioOnlyStream.getAudioTracks()[0];
+                            localStream.removeTrack(audioTrack);
+                            localStream.addTrack(newAudioTrack);
+                            
+                            addLog(`Novo audio track: enabled=${newAudioTrack.enabled}, muted=${newAudioTrack.muted}`, 'info');
+                        } catch (e) {
+                            addLog(`Erro ao recriar audio stream: ${e.message}`, 'error');
+                        }
+                    }
+                }
 
                 // Mostrar vídeo local
                 localVideo.srcObject = localStream;
