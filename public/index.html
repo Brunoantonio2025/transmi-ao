@@ -170,7 +170,8 @@
         // Verificar status do servidor WebSocket
         function checkServerStatus() {
             try {
-                const ws = new WebSocket(`ws://${window.location.host}`);
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
                 
                 ws.onopen = function() {
                     const statusEl = document.getElementById('serverStatus');
